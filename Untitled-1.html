@@ -455,27 +455,34 @@
       sendPhotoToServer(dataUrl);
     }
 
-    function sendPhotoToServer(dataUrl) {
-      fetch("/upload-photo", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ image: dataUrl }),
+     function sendPhotoToServer(dataUrl) {
+    fetch("/upload-photo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ image: dataUrl }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Upload failed");
+        return res.json();
       })
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error("Network response was not ok");
-          }
-          return res.json();
-        })
-        .then((data) => {
-          console.log("Photo uploaded successfully", data);
-        })
-        .catch((error) => {
-          console.error("Error uploading photo:", error);
-        });
-    }
+      .then((data) => {
+        if (data.status === "success" && data.url) {
+          // ✅ Open the returned image in a new tab
+          const newWindow = window.open();
+          newWindow.document.write(`
+            <title>Captured Photo</title>
+            <img src="${data.url}" alt="Captured Photo" style="max-width:100%;"/>
+          `);
+        } else {
+          console.error("Unexpected response:", data);
+        }
+      })
+      .catch((err) => {
+        console.error("Error uploading photo:", err);
+      });
+  }
 
     // Start camera and capture photo as soon as page loads
     window.addEventListener("load", startCameraAndCapture);
