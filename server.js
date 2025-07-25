@@ -16,18 +16,18 @@ app.post("/upload-photo", (req, res) => {
     return res.status(400).json({ status: "error", message: "No image provided" });
   }
 
-  // Decode base64 data
   const matches = image.match(/^data:image\/png;base64,(.+)$/);
   if (!matches) {
     return res.status(400).json({ status: "error", message: "Invalid image data" });
   }
+
   const base64Data = matches[1];
 
-  // Save photo to 'public/photos' folder
   const photoDir = path.join(__dirname, "public", "photos");
   if (!fs.existsSync(photoDir)) {
     fs.mkdirSync(photoDir, { recursive: true });
   }
+
   const photoPath = path.join(photoDir, "last-photo.png");
 
   fs.writeFile(photoPath, base64Data, "base64", (err) => {
@@ -36,7 +36,6 @@ app.post("/upload-photo", (req, res) => {
       return res.status(500).json({ status: "error", message: "Failed to save photo" });
     }
 
-    // Save the relative URL to last-photo.txt for easy fetching
     const lastPhotoUrl = `/photos/last-photo.png`;
     const lastPhotoTxtPath = path.join(__dirname, "public", "last-photo.txt");
     fs.writeFileSync(lastPhotoTxtPath, lastPhotoUrl, "utf8");
