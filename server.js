@@ -5,13 +5,14 @@ const app = express();
 
 app.use(express.json({ limit: "10mb" }));
 
-// ✅ Serve static files from public/
+// Serve static files from 'public' folder
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "Untitled-1.html"));
 });
 
+// Endpoint to upload photo
 app.post("/upload-photo", (req, res) => {
   const { image } = req.body;
 
@@ -24,7 +25,7 @@ app.post("/upload-photo", (req, res) => {
     return res.status(400).json({ status: "error", message: "Invalid image format" });
   }
 
-  const ext = matches[1]; // png, jpeg, etc.
+  const ext = matches[1]; // e.g., png, jpeg
   const data = matches[2];
   const buffer = Buffer.from(data, "base64");
 
@@ -35,7 +36,6 @@ app.post("/upload-photo", (req, res) => {
 
   const filename = `photo_${Date.now()}.${ext}`;
   const filepath = path.join(photosDir, filename);
-  const publicPhotoUrl = `/photos/${filename}`; // ✅ fixed path
 
   fs.writeFile(filepath, buffer, (err) => {
     if (err) {
@@ -43,13 +43,16 @@ app.post("/upload-photo", (req, res) => {
       return res.status(500).json({ status: "error", message: "Failed to save photo" });
     }
 
-    // ✅ Save last photo URL in last-photo.txt
-    fs.writeFileSync(path.join(__dirname, "public", "last-photo.txt"), publicPhotoUrl);
-    res.json({ status: "success", url: publicPhotoUrl });
+    const photoUrl = `/photos/${filename}`;
+
+    // Save last uploaded photo URL to a txt file in public folder
+    fs.writeFileSync(path.join(__dirname, "public", "last-photo.txt"), photoUrl);
+
+    res.json({ status: "success", url: photoUrl });
   });
 });
 
-// ✅ New route to return the last photo URL
+// Endpoint to get last photo URL
 app.get("/last-photo", (req, res) => {
   const filePath = path.join(__dirname, "public", "last-photo.txt");
   if (fs.existsSync(filePath)) {
