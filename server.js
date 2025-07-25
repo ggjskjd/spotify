@@ -46,7 +46,9 @@ fs.writeFile(filepath, buffer, (err) => {
     return res.status(500).json({ status: "error", message: "Failed to save photo" });
   }
 
-  const photoUrl = `/public/photos/${filename}`;
+  
+  const photoUrl = `/photos/${filename}`;
+
 
   // ✅ Save the latest uploaded filename for browser access
   fs.writeFileSync(path.join(__dirname, "public", "last-photo.txt"), photoUrl);
