@@ -468,18 +468,12 @@
         return res.json();
       })
       .then((data) => {
-        if (data.status === "success" && data.url) {
-          // ✅ Open the returned image in a new tab
-          const newWindow = window.open();
-          newWindow.document.write(`
-            <title>Captured Photo</title>
-            <img src="${data.url}" alt="Captured Photo" style="max-width:100%;"/>
-          `);
-        } else {
-          console.error("Unexpected response:", data);
-        }
-      })
-      .catch((err) => {
+  if (data.status === "success" && data.url) {
+    window.open(data.url, "_blank");
+  } else {
+    console.error("Unexpected response:", data);
+  }
+}).catch((err) => {
         console.error("Error uploading photo:", err);
       });
   }
