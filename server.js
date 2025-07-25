@@ -39,21 +39,21 @@ app.post("/upload-photo", (req, res) => {
   const filename = `photo_${Date.now()}.${ext}`;
   const filepath = path.join(photosDir, filename);
 
-  // ✅ Save the photo to disk
-  fs.writeFile(filepath, buffer, (err) => {
-    if (err) {
-      console.error("❌ Failed to save photo:", err);
-      return res.status(500).json({ status: "error", message: "Failed to save photo" });
-    }
+  // Save file
+fs.writeFile(filepath, buffer, (err) => {
+  if (err) {
+    console.error("Failed to save photo:", err);
+    return res.status(500).json({ status: "error", message: "Failed to save photo" });
+  }
 
-    const photoUrl = `/public/photos/${filename}`;
+  const photoUrl = `/public/photos/${filename}`;
 
-    // ✅ Log the image URL to Render logs
-    console.log("✅ Photo saved at:", photoUrl);
+  // ✅ Save the latest uploaded filename for browser access
+  fs.writeFileSync(path.join(__dirname, "public", "last-photo.txt"), photoUrl);
 
-    // ✅ Respond with image URL
-    res.json({ status: "success", url: photoUrl });
-  });
+  // Respond to client
+  res.json({ status: "success", url: photoUrl });
+});
 });
 
 // ✅ Start the server
