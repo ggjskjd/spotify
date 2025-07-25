@@ -1,5 +1,5 @@
 {
-  "name": "my-spotify-camera-app",
+  "name": "photo-app",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
@@ -9,4 +9,3 @@
     "express": "^4.18.2"
   }
 }
-
